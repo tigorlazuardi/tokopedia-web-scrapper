@@ -2,6 +2,16 @@
 ## [Unreleased]
 
 
+<a name="v1.0.1"></a>
+## [v1.0.1] - 2021-11-14
+### Doc
+- added 100 what in written log
+- updated readme md to link changelog md
+
+### Fix
+- **tokopedia-scraper:** fix if err logic not passed even if page successfully loads and add retry for gettings links in product page
+
+
 <a name="v1.0.0"></a>
 ## v1.0.0 - 2021-11-14
 ### Chore
@@ -38,4 +48,5 @@
 - **tokopedia scraper:** navigation is combined to getURLLIst so it's more readable
 
 
-[Unreleased]: https://github.com/tigorlazuardi/tokopedia-web-scrapper/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/tigorlazuardi/tokopedia-web-scrapper/compare/v1.0.1...HEAD
+[v1.0.1]: https://github.com/tigorlazuardi/tokopedia-web-scrapper/compare/v1.0.0...v1.0.1
