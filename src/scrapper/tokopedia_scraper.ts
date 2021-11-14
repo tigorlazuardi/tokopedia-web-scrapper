@@ -1,4 +1,10 @@
-import { TokopediaScrapeDataList, Scraper, TokopediaScrapeData, ITokopediaScrapeData } from './index.js'
+import {
+	TokopediaScrapeDataList,
+	Scraper,
+	TokopediaScrapeData,
+	ITokopediaScrapeData,
+	emptyITokopediaScrapeData,
+} from './index.js'
 import puppeteer, { Browser, Page } from 'puppeteer'
 import sleep from '../pkg/sleep.js'
 
@@ -27,6 +33,9 @@ export default class TokopediaScraper implements Scraper {
 		return scraper
 	}
 
+	/**
+	 * implements {@link Scraper} interface. Scraps given product list page.
+	 */
 	async scrap(url: string): Promise<TokopediaScrapeDataList> {
 		let i = 0
 		while (this.list.len() < 100) {
@@ -35,7 +44,11 @@ export default class TokopediaScraper implements Scraper {
 			await this.setupPage(productListPager)
 			const target = url + `&page=${i}`
 			const urls = await this.getURLList(productListPager, target)
+
+			// we don't need the lister page anymore
 			await productListPager.close()
+
+			// opens new tab for every url, limiting the amount of tabs to cpu threads, so the ram and IO network won't explode.
 			for (let i = 0; i < urls.length + CPU_THREADS; i += CPU_THREADS) {
 				const promises = []
 				for (let j = 0; j < CPU_THREADS; j++) {
@@ -56,6 +69,8 @@ export default class TokopediaScraper implements Scraper {
 						console.error(`failed to get scrap result from product page: ${result.reason}`)
 					}
 				})
+
+				// free ram by closing tab pages.
 				for (const pages of await this.browser.pages()) {
 					await pages.close()
 				}
@@ -64,6 +79,9 @@ export default class TokopediaScraper implements Scraper {
 		return this.list
 	}
 
+	/**
+	 * impersonate crawler to be seen like a browser
+	 */
 	private async setupPage(page: Page) {
 		// Fake this crawler as normal user
 		await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0')
@@ -73,6 +91,9 @@ export default class TokopediaScraper implements Scraper {
 		})
 	}
 
+	/**
+	 * navigate and scrap the product page
+	 */
 	private async navigateProductPage(page: Page, url: string): Promise<[string, TokopediaScrapeData]> {
 		let err: unknown
 		for (let i = 0; i < 3; i++) {
@@ -85,48 +106,58 @@ export default class TokopediaScraper implements Scraper {
 		}
 		if (err) throw err
 
-		// BUG: May need to increase sleep time to wait merchant name and rating because they are not exist when they should
-		// But for performance, browser seems to need to open new tabs.
-		// TODO: check if page can be closed.
-		await sleep(200)
-
 		// Enforce merchant name loading because it's rather down there in the page
 		await page.keyboard.press('ArrowDown', { delay: 100 })
 		await page.keyboard.press('ArrowDown', { delay: 100 })
-		const result = await page.evaluate(async () => {
-			const NOT_EXIST = '<not exist>'
-			const product_name =
-				document.querySelector('h1[data-testid="lblPDPDetailProductName"]')?.textContent ||
-				`product_name ${NOT_EXIST}`
-			const rating =
-				document.querySelector('span[data-testid="lblPDPDetailProductRatingNumber"]')?.textContent ||
-				`rating ${NOT_EXIST}`
-			const image_link =
-				document.querySelector('div[data-testid="PDPImageMain"] img')?.getAttribute('src') ||
-				`image_link ${NOT_EXIST}`
-			const price =
-				document.querySelector('div[data-testid="lblPDPDetailProductPrice"]')?.textContent ||
-				`price ${NOT_EXIST}`
 
-			const description =
-				document.querySelector('div[data-testid="lblPDPDescriptionProduk"]')?.textContent ||
-				`description ${NOT_EXIST}`
-			const merchant_name =
-				document.querySelector('a[data-testid="llbPDPFooterShopName"]')?.textContent ||
-				`merchant_name ${NOT_EXIST}`
+		let result: ITokopediaScrapeData = emptyITokopediaScrapeData()
 
-			return {
-				product_name,
-				image_link,
-				price,
-				rating,
-				description,
-				merchant_name,
-			} as ITokopediaScrapeData
-		})
-		result.product_url = url
+		// Sometimes it fails to fetch merchant_name or rating. we retry fetching to actually get them after delay.
+		for (let i = 0; i < 3; i++) {
+			result = await page.evaluate(this.scrapProductInfo)
+			result.product_url = url
+			if (result.merchant_name === `merchant_name <not exist>` || result.rating === 'rating <not exist>') {
+				await sleep(2000)
+			} else {
+				break
+			}
+		}
 
 		return [url, TokopediaScrapeData.fromInterface(result)]
+	}
+
+	/**
+	 * document object in this code is browser scoped. it cannot be used outside of this function.
+	 * Returned data url is still empty. Make sure to set it after calling this.
+	 */
+	private async scrapProductInfo(page: Page) {
+		const NOT_EXIST = '<not exist>'
+		const product_name =
+			document.querySelector('h1[data-testid="lblPDPDetailProductName"]')?.textContent ||
+			`product_name ${NOT_EXIST}`
+		const rating =
+			document.querySelector('span[data-testid="lblPDPDetailProductRatingNumber"]')?.textContent ||
+			`rating ${NOT_EXIST}`
+		const image_link =
+			document.querySelector('div[data-testid="PDPImageMain"] img')?.getAttribute('src') ||
+			`image_link ${NOT_EXIST}`
+		const price =
+			document.querySelector('div[data-testid="lblPDPDetailProductPrice"]')?.textContent || `price ${NOT_EXIST}`
+
+		const description =
+			document.querySelector('div[data-testid="lblPDPDescriptionProduk"]')?.textContent ||
+			`description ${NOT_EXIST}`
+		const merchant_name =
+			document.querySelector('a[data-testid="llbPDPFooterShopName"]')?.textContent || `merchant_name ${NOT_EXIST}`
+
+		return {
+			product_name,
+			image_link,
+			price,
+			rating,
+			description,
+			merchant_name,
+		} as ITokopediaScrapeData
 	}
 
 	private async getURLList(page: Page, url: string) {
@@ -155,7 +186,7 @@ export default class TokopediaScraper implements Scraper {
 	}
 
 	/**
-	 * close connection to tokopedia
+	 * implements {@link Scraper} interface. closes connection to tokopedia
 	 */
 	async close() {
 		if (this.browser) {

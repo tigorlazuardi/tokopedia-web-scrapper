@@ -8,6 +8,23 @@ export interface ITokopediaScrapeData {
 	product_url: string
 }
 
+/**
+ * Utility function to return {@link ITokopediaInterface} with all value as empty strings.
+ *
+ * Used to bypass typescript limit not knowing if an object is initialized or not.
+ */
+export function emptyITokopediaScrapeData(): ITokopediaScrapeData {
+	return {
+		product_name: '',
+		description: '',
+		image_link: '',
+		price: '',
+		rating: '',
+		merchant_name: '',
+		product_url: '',
+	}
+}
+
 export class TokopediaScrapeData implements ITokopediaScrapeData {
 	constructor(
 		public product_name: string,
@@ -19,6 +36,9 @@ export class TokopediaScrapeData implements ITokopediaScrapeData {
 		public product_url: string,
 	) {}
 
+	/**
+	 * creates {@link TokopediaScrapeData} from {@link ITokopediaScrapeData} interface object.
+	 */
 	static fromInterface(s: ITokopediaScrapeData): TokopediaScrapeData {
 		return new TokopediaScrapeData(
 			s.product_name,
