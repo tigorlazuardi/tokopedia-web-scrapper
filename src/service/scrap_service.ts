@@ -6,7 +6,8 @@ export default class ScrapperService {
 
 	async scrap() {
 		const data = await this.scrapper.scrap(this.url)
-		await this.writer.writeRecords(data.csvRows())
+		const rows = data.csvRows().slice(0, 100)
+		await this.writer.writeRecords(rows)
 	}
 	close() {
 		return this.scrapper.close()
