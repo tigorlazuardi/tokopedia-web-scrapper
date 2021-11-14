@@ -4,6 +4,10 @@ This is a tool to scrap top 100 mobile products in category Mobile Phone / Table
 
 It uses Chromium Engine and Puppeteer api under the hood to crawl the web.
 
+# Changelog
+
+Go to [CHANGELOG.md](./CHANGELOG.md) for more readable git commits.
+
 # Why Uses Chromium Engine?
 
 One of the reason is because it is actually using a Browser (Finger Printing) and easy to impersonate to be an actual user using actual browser.
