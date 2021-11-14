@@ -23,6 +23,6 @@ export default class CSVWriter {
 
 	async writeRecords(records: string[][]) {
 		await this.writer.writeRecords(records)
-		console.log(`written ${records.length} to ${this.filename}`)
+		console.log(`written ${records.length} records to ${this.filename}`)
 	}
 }
