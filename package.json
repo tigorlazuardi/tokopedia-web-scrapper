@@ -1,0 +1,24 @@
+{
+  "name": "tokopedia-web-scrap-ts",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^2.4.1",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "@types/fs-extra": "^9.0.13",
+    "@types/puppeteer": "^5.4.4",
+    "csv-writer": "^1.6.0",
+    "fs-extra": "^10.0.0",
+    "puppeteer": "^11.0.0"
+  }
+}
