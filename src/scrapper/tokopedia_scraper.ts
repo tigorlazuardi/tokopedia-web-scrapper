@@ -99,6 +99,7 @@ export default class TokopediaScraper implements Scraper {
 		for (let i = 0; i < 3; i++) {
 			try {
 				await page.goto(url)
+				err = null
 				break
 			} catch (e) {
 				err = e
@@ -165,6 +166,7 @@ export default class TokopediaScraper implements Scraper {
 		for (let i = 0; i < 3; i++) {
 			try {
 				await page.goto(url)
+				err = null
 				break
 			} catch (e) {
 				err = e
@@ -175,10 +177,15 @@ export default class TokopediaScraper implements Scraper {
 		await page.keyboard.press('ArrowDown', { delay: 100 })
 		return page.evaluate(async () => {
 			const result: string[] = []
+			const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 			document.querySelectorAll('div[data-testid="lstCL2ProductList"]>div>a').forEach((el) => {
-				const link = el.getAttribute('href')
-				if (link && !link.includes('https://ta.tokopedia.com/promo')) {
-					result.push(link)
+				for (let j = 0; j < 3; j++) {
+					const link = el.getAttribute('href')
+					if (link) {
+						if (!link.includes('https://ta.tokopedia.com/promo')) result.push(link)
+						break
+					}
+					sleep(2000)
 				}
 			})
 			return result
