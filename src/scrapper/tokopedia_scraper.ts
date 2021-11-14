@@ -24,8 +24,7 @@ export default class TokopediaScraper implements Scraper {
 		while (this.list.len() < 100) {
 			i++
 			const target = url + `&page=${i}`
-			await this.navigateProductList(page, target)
-			const urls = await this.getURLList(page)
+			const urls = await this.getURLList(page, target)
 			for (const urlProduct of urls) {
 				const data = await this.navigateProductPage(page, urlProduct)
 				console.log(data)
@@ -44,15 +43,15 @@ export default class TokopediaScraper implements Scraper {
 		})
 	}
 
-	private async navigateProductList(page: Page, url: string) {
-		await page.goto(url)
-		// Trigger lazy load products
-		await page.keyboard.press('ArrowDown', { delay: 100 })
-	}
-
 	private async navigateProductPage(page: Page, url: string): Promise<TokopediaScrapeData> {
 		await page.goto(url)
+
+		// BUG: May need to increase sleep time to wait merchant name and rating because they are not exist when they should
+		// But for performance, browser seems to need to open new tabs.
+		// TODO: check if page can be closed.
 		await sleep(200)
+
+		// Enforce merchant name loading because it's rather down there in the page
 		await page.keyboard.press('ArrowDown', { delay: 100 })
 		await page.keyboard.press('ArrowDown', { delay: 100 })
 		const result = await page.evaluate(async () => {
@@ -90,7 +89,10 @@ export default class TokopediaScraper implements Scraper {
 		return TokopediaScrapeData.fromInterface(result)
 	}
 
-	private async getURLList(page: Page) {
+	private async getURLList(page: Page, url: string) {
+		await page.goto(url)
+		// Trigger lazy load products
+		await page.keyboard.press('ArrowDown', { delay: 100 })
 		return page.evaluate(async () => {
 			const result: string[] = []
 			document.querySelectorAll('div[data-testid="lstCL2ProductList"]>div>a').forEach((el) => {
