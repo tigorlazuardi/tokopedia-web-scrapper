@@ -2,6 +2,10 @@ import { TokopediaScrapeDataList, Scraper, TokopediaScrapeData, ITokopediaScrape
 import puppeteer, { Browser, Page } from 'puppeteer'
 import sleep from '../pkg/sleep.js'
 
+import os from 'os'
+
+const CPU_THREADS = os.cpus().length
+
 /**
  * For normal use, do not construct using `new` directly.
  * but call the static method `init` to instance this class instead.
@@ -13,22 +17,48 @@ export default class TokopediaScraper implements Scraper {
 	}
 
 	static async init(): Promise<TokopediaScraper> {
-		const browser = await puppeteer.launch()
-		return new TokopediaScraper(browser)
+		const browser = await puppeteer.launch({
+			timeout: 10000,
+		})
+		const scraper = new TokopediaScraper(browser)
+		// Chromium must be closed on exit
+		process.on('exit', scraper.close)
+
+		return scraper
 	}
 
 	async scrap(url: string): Promise<TokopediaScrapeDataList> {
-		const page = await this.browser.newPage()
-		await this.setupPage(page)
 		let i = 0
 		while (this.list.len() < 100) {
 			i++
+			const productListPager = await this.browser.newPage()
+			await this.setupPage(productListPager)
 			const target = url + `&page=${i}`
-			const urls = await this.getURLList(page, target)
-			for (const urlProduct of urls) {
-				const data = await this.navigateProductPage(page, urlProduct)
-				console.log(data)
-				this.list.append(urlProduct, data)
+			const urls = await this.getURLList(productListPager, target)
+			await productListPager.close()
+			for (let i = 0; i < urls.length + CPU_THREADS; i += CPU_THREADS) {
+				const promises = []
+				for (let j = 0; j < CPU_THREADS; j++) {
+					const idx = i * CPU_THREADS + j
+					if (urls[idx]) {
+						console.log('visiting', urls[idx])
+						const productPager = await this.browser.newPage()
+						await this.setupPage(productPager)
+						promises.push(this.navigateProductPage(productPager, urls[idx]))
+					}
+				}
+				;(await Promise.allSettled(promises)).forEach(async (result) => {
+					if (result.status === 'fulfilled') {
+						const [url, data] = result.value
+						console.log(data)
+						this.list.append(url, data)
+					} else {
+						console.error(`failed to get scrap result from product page: ${result.reason}`)
+					}
+				})
+				for (const pages of await this.browser.pages()) {
+					await pages.close()
+				}
 			}
 		}
 		return this.list
@@ -43,8 +73,17 @@ export default class TokopediaScraper implements Scraper {
 		})
 	}
 
-	private async navigateProductPage(page: Page, url: string): Promise<TokopediaScrapeData> {
-		await page.goto(url)
+	private async navigateProductPage(page: Page, url: string): Promise<[string, TokopediaScrapeData]> {
+		let err: unknown
+		for (let i = 0; i < 3; i++) {
+			try {
+				await page.goto(url)
+				break
+			} catch (e) {
+				err = e
+			}
+		}
+		if (err) throw err
 
 		// BUG: May need to increase sleep time to wait merchant name and rating because they are not exist when they should
 		// But for performance, browser seems to need to open new tabs.
@@ -68,6 +107,7 @@ export default class TokopediaScraper implements Scraper {
 			const price =
 				document.querySelector('div[data-testid="lblPDPDetailProductPrice"]')?.textContent ||
 				`price ${NOT_EXIST}`
+
 			const description =
 				document.querySelector('div[data-testid="lblPDPDescriptionProduk"]')?.textContent ||
 				`description ${NOT_EXIST}`
@@ -86,11 +126,20 @@ export default class TokopediaScraper implements Scraper {
 		})
 		result.product_url = url
 
-		return TokopediaScrapeData.fromInterface(result)
+		return [url, TokopediaScrapeData.fromInterface(result)]
 	}
 
 	private async getURLList(page: Page, url: string) {
-		await page.goto(url)
+		let err: unknown
+		for (let i = 0; i < 3; i++) {
+			try {
+				await page.goto(url)
+				break
+			} catch (e) {
+				err = e
+			}
+		}
+		if (err) throw err
 		// Trigger lazy load products
 		await page.keyboard.press('ArrowDown', { delay: 100 })
 		return page.evaluate(async () => {
@@ -109,6 +158,8 @@ export default class TokopediaScraper implements Scraper {
 	 * close connection to tokopedia
 	 */
 	async close() {
-		return this.browser.close()
+		if (this.browser) {
+			return this.browser.close()
+		}
 	}
 }
