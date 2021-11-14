@@ -1,4 +1,4 @@
-export class ScrapeData {
+export class TokopediaScrapeData {
 	constructor(
 		public product_name: string,
 		public description: string,
@@ -24,18 +24,18 @@ export class ScrapeData {
 	}
 }
 
-export class ScrapeDataList {
-	private list: { [url: string]: ScrapeData }
+export class TokopediaScrapeDataList {
+	private list: { [url: string]: TokopediaScrapeData }
 	constructor() {
 		this.list = {}
 	}
 
-	append(url: string, data: ScrapeData) {
+	append(url: string, data: TokopediaScrapeData) {
 		this.list[url] = data
 	}
 
 	csvHeaders(): string[] {
-		return ScrapeData.csvHeaders()
+		return TokopediaScrapeData.csvHeaders()
 	}
 
 	csvRows(): string[][] {
@@ -44,5 +44,6 @@ export class ScrapeDataList {
 }
 
 export interface Scraper {
-	scrap: (url: string) => Promise<ScrapeDataList>
+	scrap: (url: string) => Promise<TokopediaScrapeDataList>
+	close: () => Promise<void>
 }

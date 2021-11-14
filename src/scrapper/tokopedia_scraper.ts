@@ -1,4 +1,4 @@
-import { ScrapeDataList, Scraper } from './index.js'
+import { TokopediaScrapeDataList, Scraper } from './index.js'
 import puppeteer, { Browser, Page } from 'puppeteer'
 import sleep from '../pkg/sleep.js'
 
@@ -7,9 +7,9 @@ import sleep from '../pkg/sleep.js'
  * but call the static method `init` to instance this class instead.
  */
 export default class TokopediaScraper implements Scraper {
-	private list: ScrapeDataList
+	private list: TokopediaScrapeDataList
 	constructor(private browser: Browser) {
-		this.list = new ScrapeDataList()
+		this.list = new TokopediaScrapeDataList()
 	}
 
 	static async init(): Promise<TokopediaScraper> {
@@ -17,7 +17,7 @@ export default class TokopediaScraper implements Scraper {
 		return new TokopediaScraper(browser)
 	}
 
-	async scrap(url: string): Promise<ScrapeDataList> {
+	async scrap(url: string): Promise<TokopediaScrapeDataList> {
 		const page = await this.browser.newPage()
 		await this.setupPage(page)
 		await this.navigateProductList(page, url)
@@ -38,5 +38,12 @@ export default class TokopediaScraper implements Scraper {
 		await sleep(1000)
 		// Trigger lazy load products
 		await page.keyboard.press('ArrowDown', { delay: 100 })
+	}
+
+	/**
+	 * close connection to tokopedia
+	 */
+	async close() {
+		return this.browser.close()
 	}
 }
