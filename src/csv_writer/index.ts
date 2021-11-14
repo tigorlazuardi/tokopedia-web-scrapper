@@ -11,7 +11,7 @@ import { ObjectMap } from 'csv-writer/src/lib/lang/object'
 export default class CSVWriter {
 	private writer: CsvWriter<ObjectMap<any>>
 
-	constructor(filename: string, headers: string[]) {
+	constructor(public filename: string, headers: string[]) {
 		if (fs.existsSync(filename)) {
 			throw new Error(`file already exist: ${filename}`)
 		}
@@ -23,5 +23,6 @@ export default class CSVWriter {
 
 	async writeRecords(records: string[][]) {
 		await this.writer.writeRecords(records)
+		console.log(`written ${records.length} to ${this.filename}`)
 	}
 }
