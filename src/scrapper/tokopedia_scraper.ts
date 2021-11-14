@@ -130,7 +130,7 @@ export default class TokopediaScraper implements Scraper {
 	 * document object in this code is browser scoped. it cannot be used outside of this function.
 	 * Returned data url is still empty. Make sure to set it after calling this.
 	 */
-	private async scrapProductInfo(page: Page) {
+	private async scrapProductInfo() {
 		const NOT_EXIST = '<not exist>'
 		const product_name =
 			document.querySelector('h1[data-testid="lblPDPDetailProductName"]')?.textContent ||
